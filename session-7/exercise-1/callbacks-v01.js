@@ -1,3 +1,9 @@
+/* 
+ session 7 exercise 1
+ callbacks-v01.js
+ Lists all files in the current directory 
+ howing file size for files which are not directories
+*/
 var fs = require('fs');
 var source = './';
 fs.readdir(source, function(err, files){

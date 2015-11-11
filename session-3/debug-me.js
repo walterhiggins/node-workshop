@@ -1,5 +1,7 @@
-// exercise 1
-// debug-me.js
+/*
+ session 3 exercise 1
+ debug-me.js
+*/
 function inc( number ){
   return ++number;
 }
