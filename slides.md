@@ -582,11 +582,88 @@ package.json (updated)
 ------
 <!-- data-x="0" data-y="5000" -->
 # File I/O
+
 ------
 <!-- data-x="1500" data-y="5000" -->
 ## Reading a file
 There are 2 ways to read a file in NodeJS...
 
+------
+<!-- data-x="3000" data-y="5000" -->
+### Synchronous
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+var txt = fs.readFileSync('./index.js', 'utf8');
+console.log(txt);
+</pre></div>
+
+### Asynchronous
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+fs.readFile('./index.js', 'utf8', function( err, txt){
+  if (err){
+    return;
+  }
+  console.log(txt);
+});
+</pre></div>
+
+------
+<!-- data-x="4500" data-y="5000" -->
+
+* Some built-in modules (e.g. fs) have function in both asynchronous *and* synchronous flavours.
+* Synchronous functions block until completed
+* Useful for NodeJS beginners but...
+* Avoid using them!
+
+------
+<!-- data-x="6000" data-y="5000" -->
+## Encoding
+
+* The 2nd parameter to readFile `utf8` means read as text/utf8.
+* If no encoding then file is read as binary (octet stream).
+
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+fs.readFile('./index.js', function( err, buf){
+  if (err){
+    return;
+  }
+  console.log(buf);
+});
+</pre></div>
+
+------
+<!-- data-x="7500" data-y="5000" -->
+## Callbacks (again)
+File and Network I/O functions use callbacks to tell your program when data is ready.
+<div class="code"><pre class="brush: js">
+// read-file.js
+var fs = require('fs');
+fs.readFile('./index.js', function( err, buf){
+  if (err){
+    return;
+  }
+  console.log(buf);
+  console.log('File read complete.');
+
+});
+console.log('Reading file...');
+</pre></div>
+
+------
+<!-- data-x="7500" data-y="5400" -->
+The highlighted code is executed once the file is read. (not immediately)
+
+------
+<!-- data-x="9000" data-y="5000" -->
+## Async & Errors
+Node's built-in async functions expect a callback which should have 2 parameters
+
+* error - This will be defined if an error occurred
+* data - The data returned by the async function if there isn't an error.  
+
+Your callbacks should always handle errors.
 
 <!--style type="text/css"> @import url(lib/reset.css); </style-->
 <style type="text/css"> @import url(lib/shCore.css); </style>
