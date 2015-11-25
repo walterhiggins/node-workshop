@@ -3,9 +3,10 @@ code { font-family: monospace; font-size: 32px;}
 pre { line-height: 70%; }
 div.code { font-size: 24px; }
 ul li { list-style: disc; }
+
 </style>
 
-<!-- data-x="11250" data-y="2000" data-scale="13" -->
+<!-- data-x="5000" data-y="4000" data-scale="11" -->
 ------
 
 <!-- data-x="0" data-y="0" -->
@@ -29,12 +30,11 @@ ul li { list-style: disc; }
 ## Afternoon
 
 * 13:45 - 14:15 Callbacks
-* 14:15 - 14:45 Async
-* 14:45 - 15:15 HTTP 
+* 14:15 - 14:45 Callbacks Contd.
+* 14:45 - 15:15 HTTP & Streams
 * 15:15 - 15:30 &#x2615;  
-* 15:30 - 16:00 ExpressJS
-* 16:00 - 16:30 Middleware
-* 16:30 - 17:00 Promise
+* 15:30 - 16:15 ExpressJS
+* 16:15 - 17:00 Middleware
 
 ------
 
@@ -665,9 +665,1107 @@ Node's built-in async functions expect a callback which should have 2 parameters
 
 Your callbacks should always handle errors.
 
-<!--style type="text/css"> @import url(lib/reset.css); </style-->
+------
+<!-- data-x="10500" data-y="5000" -->
+## Error Handling
+3 Main ways to handle errors
+* `throw` the error (making it an exception)
+* pass the error to a _callback_, a function provided for handling errors and results of async operations.
+* emit an "error" event
+
+------
+<!-- data-x="12000" data-y="5000" -->
+Error handling in NodeJS is complicated  
+[https://www.joyent.com/developers /node/design/errors](https://www.joyent.com/developers/node/design/errors)
+------
+<!-- data-x="13500" data-y="5000" -->
+# Questions?
+
+------
+<!-- data-x="0" data-y="6000" -->
+# Callbacks
+
+------
+<!-- data-x="1500" data-y="6000" -->
+# What's a callback?
+A function which will be invoked _when something happens_.
+
+* Also called _deferred_ functions
+* Most common use-case `setTimeout(function(){ //... }, 1000)`
+
+------
+<!-- data-x="3000" data-y="6000" -->
+## Reading directories
+There are 2 ways to read directories...  
+Synchronously
+<div class="code"><pre class="brush: js">
+// print number of files in directory
+var fs = require('fs');
+var files = fs.readdirSync('./');
+console.log(files.length);
+</pre></div>
+Asynchronously (using Callbacks)
+<div class="code"><pre class="brush: js">
+// print number of files in directory
+var fs = require('fs');
+fs.readdir('./', function(err, files){
+  console.log(files.length);
+});
+</pre></div>
+------
+<!-- data-x="4500" data-y="6000" -->
+## Prefer Async to Sync
+Most NodeJS APIs are *only* Asynchronous.
+
+------
+<!-- data-x="7500" data-y="6000" -->
+It's harder to understand the flow of control in Asynchronous code.
+
+------
+<!-- data-x="9000" data-y="6000" -->
+The following code example: 
+
+* Lists all files in the current directory
+* Displays size for each file
+
+------
+<!-- data-x="10500" data-y="6000" -->
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+var source = './';
+fs.readdir(source, function(err, files){
+  if (err) {
+    console.log('Error finding files:' + err);
+  } else {
+    files.forEach( function( filename ){
+      fs.stat( filename, function( err, stats ){
+        if (err) {
+          console.log('Stat error:' + err);
+        } else {
+          if ( stats.isFile() ){
+            fs.readFile( filename, function( err, contents ){
+              if (err){
+                console.log('Read Error:' + err);
+              } else {
+                console.log(filename + ':' + contents.length);
+              }
+            });
+          }
+        }
+      });
+    });
+  }
+});
+</pre></div>
+Download [https://ibm.biz/BdHPhr](https://ibm.biz/BdHPhr) and save as `dirFiles.js`
+
+------
+<!-- data-x="12000" data-y="6000" -->
+## Questions
+* Is this code readable?
+* Is it maintainable?
+* How many callbacks are in this code?
+
+------
+<!-- data-x="13500" data-y="6000" -->
+## Callback Hell
+(And how to avoid it)
+------
+
+<!-- data-x="15000" data-y="6000" -->
+## Function names
+In the example code, none of the callbacks functions are named. This can make debugging more difficult.
+------
+
+<!-- data-x="16500" data-y="6000" -->
+Exercise 1: Add an Error
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+var source = './';
+fs.readdir(source, function(err, files){
+  if (err) {
+    console.log('Error finding files:' + err);
+  } else {
+    files.forEach( function( filename ){
+      fs.stat( filename, function( err, stats ){
+        if (err) {
+          console.log('Stat error:' + err);
+        } else {
+          if ( stats.isFile() ){
+            fs.readFile( filename, function( err, contents ){
+              if (err){
+                console.log('Read Error:' + err);
+              } else {
+                console.log(filename + ':' + contents.length);
+/\* ===> \*/      throw new Error('Boo!');
+              }
+            });
+          }
+        }
+      });
+    });
+  }
+});
+</pre></div>
+------
+<!-- data-x="18000" data-y="6000" -->
+Run the Code
+```
+$ node dirFiles.js
+```
+
+------
+<!-- data-x="19500" data-y="6000" -->
+The Stacktrace for this program includes the filename and line number.
+Since no functions are named, there is no function name in the stack trace.
+```
+Error: boo!
+    at C:\Users\walter\dirFiles.js:24:23
+    at fs.js:334:14
+    at FSReqWrap.oncomplete (fs.js:95:15)
+```
+------
+<!-- data-x="21000" data-y="6000" -->
+The functions used in dirFile.js are *anonymous function expressions*, because `function()...` has no name identifier on it.
+<div class="code"><pre class="brush: js">
+fs.readFile( filename, function( err, contents ){
+  if (err){
+    console.log('Read Error:' + err);
+  } else {
+    console.log(filename + ':' + contents.length);
+  }
+});
+</pre></div>
+------
+<!-- data-x="22500" data-y="6000" -->
+Many JS libraries _encourage_ this idiomatic style of code, but there are drawbacks!
+
+* No useful name displayed in stack trace
+* Descriptive function names make code more readable / self-documenting.
+------
+
+<!-- data-x="24000" data-y="6000" -->
+Exercise 2: Give each function a name.
+<div class="code"><pre class="brush: js">
+fs.readFile( filename, function onReadFile( err, contents ){
+  if (err){
+    console.log('Read Error:' + err);
+  } else {
+    console.log(filename + ':' + contents.length);
+  }
+});
+</pre></div>
+You can call the functions what you like, just make them descriptive!
+------
+
+<!-- data-x="25500" data-y="6000" -->
+Run the Code again
+```
+$ node dirFiles.js
+```
+
+------
+<!-- data-x="27000" data-y="6000" -->
+```
+Error: boo!
+    at onReadFile (C:\Users\walter\dirFiles.js:24:23)
+    at fs.js:334:14
+    at FSReqWrap.oncomplete (fs.js:95:15)
+```
+------
+<!-- data-x="28500" data-y="6000" -->
+Function names make code more readable and easier to debug but don't fully solve the problem of callback hell
+------
+
+<!-- data-x="30000" data-y="6000" -->
+The code is still deeply nested and the flow is still difficult to understand.
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+var source = './';
+fs.readdir(source, function onReadDir(err, files){
+  if (err) {
+    console.log('Error finding files:' + err);
+  } else {
+    files.forEach( function sizeEachFile( filename ){
+      fs.stat( filename, function onStatFile( err, stats ){
+        if (err) {
+          console.log('Stat error:' + err);
+        } else {
+          if ( stats.isFile() ){
+            fs.readFile( filename, function onReadFile( err, contents ){
+              if (err){
+                console.log('Read Error:' + err);
+              } else {
+                console.log(filename + ':' + contents.length);
+              }
+            });
+          }
+        }
+      });
+    });
+  }
+}); 
+</pre></div>
+------
+
+<!-- data-x="31500" data-y="6000" -->
+## Callback Hell contd.
+Make your code shallow.
+------
+
+<!-- data-x="33000" data-y="6000" -->
+### Function Declarations
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+var source = './';
+function onReadDir(err, files){
+  if (err) {
+    console.log('Error finding files:' + err);
+  } else {
+    files.forEach( function sizeEachFile( filename ){
+      fs.stat( filename, function onStatFile( err, stats ){
+        if (err) {
+          console.log('Stat error:' + err);
+        } else {
+          if ( stats.isFile() ){
+            fs.readFile( filename, function onReadFile( err, contents ){
+              if (err){
+                console.log('Read Error:' + err);
+              } else {
+                console.log(filename + ':' + contents.length);
+              }
+            });
+          }
+        }
+      });
+    });
+  }
+}
+fs.readdir(source, onReadDir); 
+</pre></div>
+------
+
+<!-- data-x="34500" data-y="6000" -->
+## Exercise
+Change the `sizeEachFile` function from a function-expression to a function-declaration.
+(You might have given the function a different name, it's the function passed to `files.forEach`)
+------
+
+<!-- data-x="36000" data-y="6000" -->
+
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+var source = './';
+function onReadDir(err, files){
+  if (err) {
+    console.log('Error finding files:' + err);
+  } else {
+    files.forEach( sizeEachFile );
+  }
+}
+function sizeEachFile( filename ){
+  fs.stat( filename, function onStatFile( err, stats ){
+    if (err) {
+      console.log('Stat error:' + err);
+    } else {
+      if ( stats.isFile() ){
+        fs.readFile( filename, function onReadFile( err, contents ){
+          if (err){
+            console.log('Read Error:' + err);
+          } else {
+            console.log(filename + ':' + contents.length);
+          }
+        });
+      }
+    }
+  });
+}
+fs.readdir(source, onReadDir); 
+</pre></div>
+
+------
+
+<!-- data-x="37500" data-y="6000" -->
+Run the Code
+```
+$ node dirFiles.js
+```
+
+Ensure it still works!
+------
+
+<!-- data-x="39000" data-y="6000" -->
+## Exercise
+Now turn the `onStatFile` function-expression (the function passed to fs.stat) into a function declaration.
+------
+
+<!-- data-x="40500" data-y="6000" -->
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+var source = './';
+function onReadDir(err, files){
+  if (err) {
+    console.log('Error finding files:' + err);
+  } else {
+    files.forEach( sizeEachFile );
+  }
+}
+function onStatFile( err, stats ){
+  if (err) {
+    console.log('Stat error:' + err);
+  } else {
+    if ( stats.isFile() ){
+      fs.readFile( filename, function onReadFile( err, contents ){
+        if (err){
+          console.log('Read Error:' + err);
+        } else {
+          console.log(filename + ':' + contents.length);
+        }
+      });
+    }
+  }
+}
+function sizeEachFile( filename ){
+  fs.stat( filename, onStatFile);
+}
+fs.readdir(source, onReadDir); 
+</pre></div>
+------
+
+<!-- data-x="42000" data-y="6000" -->
+## Run the Code
+```
+C:\Users\walter\dirFiles.js:15
+      fs.readFile( filename, function onReadFile( err, contents ){
+                   ^
+ReferenceError: filename is not defined
+    at onStatFile (C:\Users\walter\dirFiles.js:15:20)
+    at FSReqWrap.oncomplete (fs.js:95:15)
+```
+------
+
+<!-- data-x="43500" data-y="6000" -->
+## Scope
+The previous code failed because the `filename` variable wasn't in scope. We have 2 options...
+
+* Don't try to flatten the code any further
+* Add the `filename` variable to the function scope (how?)
+
+------
+
+<!-- data-x="45000" data-y="6000" -->
+## Scope Contd.
+### Binding
+In Javascript `Function.prototype.bind()` can be used to *bind* together a function and 1 or more variables, returning a new function.
+------
+
+<!-- data-x="46500" data-y="6000" -->
+## Bind + this
+### Exercise
+```
+$ node
+> var me = { 
+    name: 'Walter',
+    greet: function(){ 
+      console.log(this.name);
+    }
+  }
+> me.greet()
+```
+------
+
+<!-- data-x="46500" data-y="6400" -->
+```
+> setTimeout(me.greet, 1000);
+```
+------
+<!-- data-x="48000" data-y="6000" -->
+![This Confusion](this-confusion.png)
+
+------
+
+<!-- data-x="48000" data-y="6400" -->
+```
+> setTimeout(me.greet.bind(me), 1000);
+```
+
+------
+
+<!-- data-x="49500" data-y="6000" -->
+## Bind + parameters
+Bind can also be used to *prepend* additional parameters into a function.
+
+<div class="code"><pre class="brush: js">
+function onStatFile( filename, err, stats ){
+//                   ^^^^^^^^
+ ...
+}
+function sizeEachFile( filename ){
+  var boundFn = onStatFile.bind(null,filename);
+//                                   ^^^^^^^^
+  fs.stat( filename, boundFn);
+}
+</pre></div>
+### Exercise: Update dirFiles.js accordingly
+------
+<!-- data-x="51000" data-y="6000" -->
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+var source = './';
+function onReadDir(err, files){
+  if (err) {
+    console.log('Error finding files:' + err);
+  } else {
+    files.forEach( sizeEachFile );
+  }
+}
+function onStatFile( filename, err, stats ){
+  if (err) {
+    console.log('Stat error:' + err);
+  } else {
+    if ( stats.isFile() ){
+      fs.readFile( filename, function onReadFile( err, contents ){
+        if (err){
+          console.log('Read Error:' + err);
+        } else {
+          console.log(filename + ':' + contents.length);
+        }
+      });
+    }
+  }
+}
+function sizeEachFile( filename ){
+  var boundFn = onStatFile.bind(null,filename);
+  fs.stat( filename, boundFn);
+}
+fs.readdir(source, onReadDir); 
+</pre></div>
+------
+<!-- data-x="52500" data-y="6000" -->
+## Exercise
+Make all remaining function expressions function declarations.
+------
+
+<!-- data-x="54000" data-y="6000" -->
+### Before
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+var source = './';
+fs.readdir(source, function(err, files){
+  if (err) {
+    console.log('Error finding files:' + err);
+  } else {
+    files.forEach( function( filename ){
+      fs.stat( filename, function( err, stats ){
+        if (err) {
+          console.log('Stat error:' + err);
+        } else {
+          if ( stats.isFile() ){
+            fs.readFile( filename, function( err, contents ){
+              if (err){
+                console.log('Read Error:' + err);
+              } else {
+                console.log(filename + ':' + contents.length);
+              }
+            });
+          }
+        }
+      });
+    });
+  }
+});
+</pre></div>
+------
+<!-- data-x="55500" data-y="6000" -->
+### After
+<div class="code"><pre class="brush: js">
+var fs = require('fs');
+var source = './';
+function onReadDir(err, files){
+  if (err) {
+    console.log('Error finding files:' + err);
+  } else {
+    files.forEach( sizeEachFile );
+  }
+}
+function onReadFile( filename, err, contents ){
+  if (err){
+    console.log('Read Error:' + err);
+  } else {
+    console.log(filename + ':' + contents.length);
+  }
+}
+function onStatFile( filename, err, stats ){
+  if (err) {
+    console.log('Stat error:' + err);
+  } else {
+    if ( stats.isFile() ){
+      fs.readFile( filename, onReadFile.bind(null, filename));
+    }
+  }
+}
+function sizeEachFile( filename ){
+  var boundFn = onStatFile.bind(null,filename);
+  fs.stat( filename, boundFn);
+}
+fs.readdir(source, onReadDir); 
+</pre></div>
+------
+<!-- data-x="57000" data-y="6000" -->
+# Questions?
+------
+<!-- data-x="0" data-y="7000" -->
+# Web Servers
+------
+<!-- data-x="1500" data-y="7000" -->
+## Hello World
+<div class="code"><pre class="brush: js">
+// hello-server.js
+var http = require('http');
+function onRequest(request, response) {
+  response.writeHead(200, {
+    "Content-Type": "text/plain"
+  });
+  response.end("Hello World\n");
+}
+var server = http.createServer( onRequest );
+server.listen(8000);
+</pre></div>
+Download source from http://url.ie/z6tg
+------
+<!-- data-x="3000" data-y="7000" -->
+## Debugging
+```
+$ node-debug hello-server.js
+```
+Set a breakpoint on line 4, then in a separate tab
+visit http://localhost:8000/
+------
+
+<!-- data-x="4500" data-y="7000" -->
+## Request
+Expand the `request` object in the locals pane
+
+* headers
+* __proto__ chain
+------
+
+<!-- data-x="6000" data-y="7000" -->
+## Response
+Expand the `response` object in the locals pane
+
+* statusCode, statusMessage
+* __proto__ chain
+
+Step through line 4
+
+------
+
+<!-- data-x="7500" data-y="7000" -->
+## Streams
+
+* `request` is a Stream (Readable)
+* `response` is a Stream (Writable)
+* File I/O uses Streams
+* Processes have Streams
+
+------
+<!-- data-x="9000" data-y="7000" -->
+![streams](streams-in-node.jpg)
+------
+<!-- data-x="10500" data-y="7000" -->
+## Pipes
+Any Readable Stream can be `pipe()`'d to a Writable Stream.
+![pipes](pipes.jpg)
+------
+<!-- data-x="12000" data-y="7000" -->
+## Hello Streams
+<div class="code"><pre class="brush: js">
+// hello-streams.js
+var http = require('http'),
+    fs = require('fs');
+
+function onRequest(request, response) {
+  response.writeHead(200, {
+    "Content-Type": "text/plain"
+  });
+  fs.createReadStream('./package.json').pipe(response);
+}
+var server = http.createServer( onRequest );
+server.listen(8000);
+</pre></div>
+------
+<!-- data-x="13500" data-y="7000" -->
+## Debugging
+```
+$ node-debug hello-streams.js
+```
+------
+<!-- data-x="15000" data-y="7000" -->
+# Questions?
+
+------
+<!-- data-x="0" data-y="8000" -->
+# ExpressJS
+## Part 1
+------
+
+<!-- data-x="1500" data-y="8000" -->
+NodeJS has many server-side frameworks
+
+* Express
+* Hapi
+* Koa
+* Sails
+
+The most popular is ExpressJS
+
+http://expressjs.com/
+
+------
+
+<!-- data-x="3000" data-y="8000" -->
+## Express
+
+* Fast
+* Unopinionated
+* Minimalist
+------
+
+<!-- data-x="4500" data-y="8000" -->
+## Installing Express
+```
+$ npm install express-generator -g
+```
+------
+
+<!-- data-x="6000" data-y="8000" -->
+## Your first web app
+```
+$ mkdir webapp
+$ cd webapp
+$ express --ejs
+$ npm install
+$ set DEBUG=webapp:*
+$ npm start
+```
+Visit http://localhost:3000/
+
+------
+
+<!-- data-x="7500" data-y="8000" -->
+## Express App Anatomy
+
+* ./package.json (npm start)
+* ./bin/www 
+* ./app.js
+* (Controllers)
+------
+<!-- data-x="9000" data-y="8000" -->
+## ./bin/www
+
+Open this file in your editor.
+
+* Line 22 : `http.createServer(app);`
+------
+
+<!-- data-x="10500" data-y="8000" -->
+## ./app.js
+
+Open webapp/app.js in your editor.
+
+This is where your Web App configuration lives.
+------
+
+<!-- data-x="12000" data-y="8000" -->
+## ./app.js
+The app.js file is the entry-point to your web app.
+
+* Middleware Setup
+* Route Setup
+
+------
+
+<!-- data-x="13500" data-y="8000" -->
+## Dependencies
+<div class="code"><pre class="brush: js">
+var express = require('express');
+var path = require('path');
+var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+var bodyParser = require('body-parser');
+
+var routes = require('./routes/index');
+var users = require('./routes/users');
+</pre></div>
+------
+
+<!-- data-x="15000" data-y="8000" -->
+## Middleware setup
+<div class="code"><pre class="brush: js">
+var app = express();
+// view engine setup
+app.set('views', path.join(\__dirname, 'views'));
+app.set('view engine', 'ejs');
+// middleware
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cookieParser());
+app.use(express.static(path.join(\__dirname, 'public')));</pre></div>
+(We'll cover middleware later)
+------
+
+<!-- data-x="16500" data-y="8000" -->
+## Route Setup
+<div class="code"><pre class="brush: js">
+app.use('/', routes);
+//       ^ mount point
+app.use('/users', users);
+//       ^^^^^^ mount point
+
+</pre></div>
+------
+
+<!-- data-x="18000" data-y="8000" -->
+## Routes
+<div class="code"><pre class="brush: js">
+// app.js
+var routes = require('./routes/index');
+...
+app.use('/', routes);
+</pre></div>
+
+<div class="code"><pre class="brush: js">
+// routes/index.js
+var express = require('express');
+var router = express.Router();
+/\* GET home page. */
+router.get('/', function(req, res, next) {
+  res.render('index', { title: 'Express' });
+});
+module.exports = router;
+</pre></div>
+
+------
+
+<!-- data-x="19500" data-y="8000" -->
+## Routes Contd.
+<div class="code"><pre class="brush: js">
+// app.js
+var users = require('./routes/users');
+...
+app.use('/users', users);
+//       ^^^^^^ mount point
+</pre></div>
+
+<div class="code"><pre class="brush: js">
+// routes/index.js
+var express = require('express');
+var router = express.Router();
+/\* GET users listing. \*/
+router.get('/', function(req, res, next) {
+  res.send('respond with a resource');
+});
+module.exports = router;
+</pre></div>
+Visit http://localhost:3000/users
+------
+<!-- data-x="21000" data-y="8000" -->
+* Routers are mounted from a mount point. 
+* All subsequent route configuration is *relative* to the mount point.
+* Router has `get` and `post` functions for each request method type (GET, POST)
+
+------
+<!-- data-x="22500" data-y="8000" -->
+## Exercise
+Add a new path to `route/users.js` so that http://localhost:3000/users/nobody will return the text '[]';
+
+You'll need to CTRL+C your app and restart using `npm start`.
+
+------
+<!-- data-x="24000" data-y="8000" -->
+## Route Parameters
+<div class="code"><pre class="brush: js">
+// route/users.js
+router.get('/named/:name', function(req, res, next){
+  res.send(req.params.name);
+});
+</pre></div>
+
+visit http://localhost:3000/users/named/tom
+
+`req.params.name` is 'tom'
+------
+
+<!-- data-x="25500" data-y="8000" -->
+## Views
+<div class="code"><pre class="brush: js">
+// app.js
+// view engine setup
+app.set('views', path.join(\__dirname, 'views'));
+//                            directory ^^^^^
+app.set('view engine', 'ejs');
+//           extension  ^^^
+</pre></div>
+
+<div class="code"><pre class="brush: js">
+// routes/index.js
+var express = require('express');
+var router = express.Router();
+/\* GET home page. */
+router.get('/', function(req, res, next) {
+  res.render('index', { title: 'Express' });
+//            ^^^^^ views/index.ejs
+});
+module.exports = router;
+</pre></div>
+Visit http://localhost:3000/
+------
+<!-- data-x="27000" data-y="8000" -->
+## Views Contd.
+Express _augments_ the standard http `Request` and `Response` objects, adding new functions.
+
+`res.render()` is one such non-standard method.
+
+The express *View Engine* adds this method.
+
+------
+<!-- data-x="28500" data-y="8000" -->
+## View Engines
+
+* Jade (default view engine used by express) http://jade-lang.com/
+* EJS http://www.embeddedjs.com/
+
+------
+<!-- data-x="30000" data-y="8000" -->
+## Views contd.
+
+<div class="code"><pre class="brush: js">
+// routes/index.js
+router.get('/', function(req, res, next) {
+  res.render('index', { title: 'Express' });
+});
+</pre></div>
+
+    <!-- view/index.ejs -->
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title><%= title %></title>
+        <link rel='stylesheet' 
+              href='/stylesheets/style.css' />
+      </head>
+      <body>
+        <h1><%= title %></h1>
+        <p>Welcome to <%= title %></p>
+      </body>
+    </html>
+
+------
+<!-- data-x="31500" data-y="8000" -->
+## Exercise 1
+Change the title which appears on the home page to something other than 'Express'.
+
+------
+<!-- data-x="33000" data-y="8000" -->
+## Exercise 2
+Change the view/index.ejs and routes/index.js files so that a list of 4 names is displayed on the home page.
+
+Refer to http://www.embeddedjs.com/ for reference.
+
+------
+<!-- data-x="34500" data-y="8000" -->
+# Questions?
+------
+<!-- data-x="0" data-y="9000" -->
+# Express Middleware
+------
+<!-- data-x="1500" data-y="9000" -->
+## Middleware lets you
+
+* Augment the Request
+* Augment the Response
+* Change the Reponse Object
+  * Write Headers
+  * Write to the Stream 
+* Customize the default Web server behavior
+
+------
+<!-- data-x="3000" data-y="9000" -->
+## Roll your own
+### A logging middleware function
+Edit app.js
+
+* Remove the line beginning `app.use(logger('dev'));`
+* Replace with the following code...
+
+<div class="code"><pre class="brush: js">// app.js 
+function logRequestUrl(req, res, next){
+  console.log(new Date() + 
+              ' request URL : ' + req.originalUrl);
+  next(); // super-important!
+}
+app.use( logRequestUrl );</pre></div>
+
+------
+<!-- data-x="4500" data-y="9000" -->
+All Middleware functions take 3 parameters
+
+* `req` - The HTTP Request object
+* `res` - The HTTP Response object
+* `next` - A reference to the next request-handling function in the middleware chain.
+
+------
+<!-- data-x="6000" data-y="9000" -->
+It's important to invoke the `next()` function or the remaining request handlers won't be invoked.
+------
+<!-- data-x="7500" data-y="9000" -->
+## The Middleware Chain
+Each request-handling function is a link in a chain.
+
+* Each middleware function should *usually* call `next()`
+* The order in which Middleware is attached is important.
+* Multiple middleware functions can be attached in the same `use()` call.
+
+------
+<!-- data-x="9000" data-y="9000" -->
+## Exercise
+<div class="code"><pre class="brush: js">// app.js 
+function logRequestUrl(req, res, next){
+  console.log(new Date() + 
+              ' request URL : ' + req.originalUrl);
+  next(); // super-important!
+}
+function logRequestMethod(req, res, next){
+  console.log(new Date() + 
+              ' request Method : ' + req.method);
+  next(); // super-important!
+}
+app.use( logRequestUrl, logRequestMethod );</pre></div>
+
+------
+<!-- data-x="10500" data-y="9000" -->
+
+<div class="code"><pre class="brush: js">
+app.use( logRequestUrl, logRequestMethod );
+</pre></div>
+
+Is the same as...
+
+<div class="code"><pre class="brush: js">
+app.use( logRequestUrl);
+app.use( logRequestMethod );
+</pre></div>
+
+------
+<!-- data-x="12000" data-y="9000" -->
+## Debugging
+---
+Linux
+```
+$ node-debug ./bin/www
+```
+Windows
+```
+C:\> node-debug bin\www
+```
+
+------
+<!-- data-x="13500" data-y="9000" -->
+## Debugging
+---
+Set a breakpoint inside both the `logRequestUrl()` and `logRequestMethod()` functions and visit http://localhost:3000/
+------
+<!-- data-x="15000" data-y="9000" -->
+## Exercise (optional)
+---
+What happens if you omit the call to `next()` inside one of the functions?
+------
+<!-- data-x="16500" data-y="9000" -->
+## Static Content Middleware
+---
+Most (All?) Web Application Servers provide a way to serve static files.
+
+------
+<!-- data-x="18000" data-y="9000" -->
+## Serving static files
+---
+```
+app.use(express.static(path.join(__dirname, 'public')));
+```
+
+For any given URL, look for a matching file in the `./public` dir and serve it.
+
+http://localhost:3000/stylesheets/style.css is served from `./public/stylesheets/style.css` 
+------
+
+<!-- data-x="19500" data-y="9000" -->
+## 3rd-party Middleware
+---
+There are many open-source Express middleware modules on NPM.
+
+* Authentication 
+  - PassportJS
+  - OAuth
+* Compression
+
+------
+<!-- data-x="21000" data-y="9000" -->
+Go to http://npmjs.com and search for 'express'.
+------
+
+<!-- data-x="22500" data-y="9000" -->
+## 404 Middleware
+---
+You should add a 404 (Page Not Found) if a visitor tries to access an unknown route...
+<div class="code"><pre class="brush: js">
+// app.js
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});</pre></div>
+
+---
+
+This should be the last-but-one handler in the middleware stack...
+------
+<!-- data-x="24000" data-y="9000" -->
+## Error Handling Middleware
+Error-handling middleware is just like any other except with 4 arguments instead of 3
+
+* error - The error which occurred
+* request - The HTTP Request object
+* response - The HTTP Response object
+* next - The next handler in the middleware stack
+
+------
+<!-- data-x="25500" data-y="9000" -->
+You define error-handling middleware last, after other `app.use()` and route calls.
+------
+<!-- data-x="27000" data-y="9000" -->
+# Questions?
+
+------
+<!-- data-x="28500" data-y="9000" -->
+# Next Steps
+
+* Get to know Streams
+* Browse the source code to NodeJS 
+* Browse source code of a 3rd-party Express Middleware package.
+* Tools - too many to cover today
+  * yeoman
+  * grunt
+  * jasmine
+  * gulp
+  * browserify
+
 <style type="text/css"> @import url(lib/shCore.css); </style>
 <style type="text/css"> @import url(lib/shCoreDefault.css); </style>
+
 <script src="lib/shCore.js"></script>
 <script src="lib/shBrushJScript.js"></script>
 <script src="lib/jquery-2.1.4.js"></script>
