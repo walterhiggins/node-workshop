@@ -640,7 +640,7 @@ File and Network I/O functions use callbacks to tell your program when data is r
 <div class="code"><pre class="brush: js">
 // read-file.js
 var fs = require('fs');
-fs.readFile('./index.js', function( err, buf){
+fs.readFile('./index.js','utf8', function( err, buf){
   if (err){
     return;
   }
